@@ -296,7 +296,7 @@ def get_pred_f1(model_path, im, pred_boxes, pred_sizes, pred_scores):
              image_info_dict['stdev obj size'][0]  # standard deviation of defect bounding box size
              ]).reshape(1, -1)
 
-    print(X.shape)
+    #print(X.shape)
 
     import joblib
     scaler = joblib.load(os.path.join(model_path, 'StandardScaler.pkl'))
@@ -306,7 +306,7 @@ def get_pred_f1(model_path, im, pred_boxes, pred_sizes, pred_scores):
     rf = joblib.load(os.path.join(model_path, 'RandomForestRegressor.pkl'))
     pred_f1 = rf.predict(X_scale)
     
-    return pred_f1
+    return pred_f1, image_confidence
 
 def run(IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, SAVE_PATH, NM_PER_PIXEL_LIST, IMAGE_THICKNESS_LIST, NUM_CLASSES, CLASS_NAMES, CLASS_COLORS, MAKE_SIZE_HIST=False):
     if not os.path.exists(SAVE_PATH):
@@ -327,12 +327,13 @@ def run(IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, SAVE_PATH, NM_PER_P
         im, outputs = visualize_pred_image(IMAGE_PATH, SAVE_PATH, MY_IMAGE, predictor, defect_metadata)
         pred_classes, pred_boxes, pred_segmentations, pred_sizes, pred_shapes, pred_density, pred_swelling, pred_scores = run_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, im, outputs)
 
-        pred_f1 = get_pred_f1(MODEL_PATH_BASE, im, pred_boxes, pred_sizes, pred_scores)
+        pred_f1, image_confidence = get_pred_f1(MODEL_PATH_BASE, im, pred_boxes, pred_sizes, pred_scores)
 
         print('********** IMAGE PREDICTIONS **********')
         print(' Image name:', MY_IMAGE)
         print(' Defect types:', CLASS_NAMES)
         print(' Predicted F1 score (from random forest):', pred_f1[0])
+        print(' Calculated image confidence score:', image_confidence)
         print(' Num predicted defects:', len(pred_boxes))
         print(' Pred swelling (percent swelling):', pred_swelling)
         print(' Pred defect density (#*10^4/nm^2):', pred_density[0])
