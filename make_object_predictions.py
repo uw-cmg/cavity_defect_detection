@@ -232,7 +232,7 @@ def run_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES
     data_dict['num_preds'] = [num_preds]
         
     df = pd.DataFrame().from_dict(data_dict, orient='index').T
-    df.to_excel(os.path.join(SAVE_PATH, 'predicted_stats_'+MY_IMAGE[:-4]+'.xlsx'), index=False)
+    df.to_csv(os.path.join(SAVE_PATH, 'predicted_stats_'+MY_IMAGE[:-4]+'.csv'), index=False)
 
 
     return pred_classes, pred_boxes, pred_segmentations, pred_sizes, pred_shapes, pred_density, pred_swelling, pred_scores
