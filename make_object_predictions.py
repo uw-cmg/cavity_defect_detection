@@ -302,8 +302,8 @@ def get_pred_f1(model_path, im, pred_boxes, pred_sizes, pred_scores):
     scaler = joblib.load(os.path.join(model_path, 'StandardScaler.pkl'))
     X_scale = scaler.transform(X)
 
-    #rf = joblib.load(os.path.join(model_path, 'rfr_model_final.pkl'))
-    rf = joblib.load(os.path.join(model_path, 'RandomForestRegressor.pkl'))
+    rf = joblib.load(os.path.join(model_path, 'rfr_model_final.pkl'))
+    #rf = joblib.load(os.path.join(model_path, 'RandomForestRegressor.pkl'))
     pred_f1 = rf.predict(X_scale)
     
     return pred_f1, image_confidence
