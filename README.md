@@ -3,5 +3,6 @@ Mask R-CNN model to detect cavity defects in electron microscopy image. Also inc
 
 ## Run example notebooks in Google Colab:
 
-* Make predictions of image F1 score with Random forest model and object predictions with Mask R-CNN
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/uw-cmg/cavity_defect_detection/blob/master/Detectron_predict_v3_cavity.ipynb)
+Make predictions of image F1 score with Random forest model and object predictions with Mask R-CNN
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)]
+(https://colab.research.google.com/github/uw-cmg/cavity_defect_detection/blob/master/Detectron_predict_v3_cavity.ipynb)
