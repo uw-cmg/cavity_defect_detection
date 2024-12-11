@@ -518,7 +518,9 @@ def match_true_and_predicted_defects_iou_bbox(true_classes_all_oneimage_sorted, 
         ious = dict()
         for j, pred_box in enumerate(pred_boxes_oneimage_sorted):
             if j not in true_pred_index_list:
-                iou = bb_intersection_over_union(boxA=true_box, boxB=pred_box)
+                true_box_shift = [true_box[0], true_box[1], true_box[0]+true_box[2], true_box[0]+true_box[3]]
+                iou = bb_intersection_over_union(boxA=true_box_shift, boxB=pred_box)
+                #iou = bb_intersection_over_union(boxA=true_box, boxB=pred_box)
                 #print('True box', true_box, 'and pred box', pred_box, 'have iou', iou)
                 ious[j] = iou
         # Use whichever has largest iou
@@ -529,6 +531,7 @@ def match_true_and_predicted_defects_iou_bbox(true_classes_all_oneimage_sorted, 
                 true_pred_index = k
 
         # Check that the iou satisfies the iou_threshold value set by user
+        print('highest true/pred iou', iou)
         if iou >= iou_threshold:
             true_class = true_classes_all_oneimage_sorted[i]
             pred_class = pred_classes_all_oneimage_sorted[true_pred_index]
@@ -551,6 +554,7 @@ def match_true_and_predicted_defects_iou_bbox(true_classes_all_oneimage_sorted, 
     return num_found
 
 def bb_intersection_over_union(boxA, boxB):
+
     # This code is not mine. I got it from this github post: https://gist.github.com/meyerjo/dd3533edc97c81258898f60d8978eddc,
     # which corrected an issue in this original post: https://www.pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/
 
@@ -694,7 +698,7 @@ def run_assess(ANNO_PATH, IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, S
         print(' Defect types:', CLASS_NAMES)
         print(' Num true defects:', len(true_boxes))
         print(' Num predicted defects:', len(pred_boxes))
-        print(' Num found defects:', len(found_defects))
+        print(' Num found defects:', num_found)
         print(' Image P, R, F1 scores:', prec, recall, F1)
         print(' True swelling (percent swelling):', true_swelling)
         print(' Pred swelling (percent swelling):', pred_swelling)
