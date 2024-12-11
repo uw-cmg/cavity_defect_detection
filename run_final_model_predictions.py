@@ -684,8 +684,12 @@ def run_assess(ANNO_PATH, IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, S
         im, outputs = visualize_pred_image(IMAGE_PATH, SAVE_PATH, MY_IMAGE, predictor, defect_metadata)
         pred_classes, pred_boxes, pred_segmentations, pred_sizes, pred_shapes, pred_density, pred_swelling, pred_scores = run_pred_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, im, outputs)
 
+        true_segmentations_oneimage_sorted, true_classes_all_oneimage_sorted, true_boxes_oneimage_sorted = (list(t) for t in zip(*sorted(zip(true_segmentations, true_classes, true_boxes))))
+                        
+        pred_segmentations_oneimage_sorted, pred_classes_all_oneimage_sorted, pred_boxes_oneimage_sorted = (list(t) for t in zip(*sorted(zip(pred_segmentations, pred_classes, pred_boxes))))
+
         # Do detection to get found defects
-        num_found = match_true_and_predicted_defects_iou_bbox(true_classes, pred_classes, true_boxes, pred_boxes, iou_threshold=0.1)
+        num_found = match_true_and_predicted_defects_iou_bbox(true_classes_all_oneimage_sorted, pred_classes_all_oneimage_sorted, true_boxes_oneimage_sorted, pred_boxes_oneimage_sorted, iou_threshold=0.1)
         fp = len(pred_boxes) - num_found
         fn = len(true_boxes) - num_found
         prec = num_found / (num_found + fp)
