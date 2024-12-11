@@ -513,6 +513,7 @@ def match_true_and_predicted_defects_iou_bbox(true_classes_all_oneimage_sorted, 
     # Loop over true bboxes and check if they correspond to pred bboxes. Do this by calculating IoU of all predicted boxes
     # and selecting the highest one. If not, then prediction missed one
     true_pred_index_list = list()
+    num_found = 0
     for i, true_box in enumerate(true_boxes_oneimage_sorted):
         ious = dict()
         for j, pred_box in enumerate(pred_boxes_oneimage_sorted):
