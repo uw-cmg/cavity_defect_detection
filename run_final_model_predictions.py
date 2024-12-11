@@ -593,7 +593,7 @@ def get_overall_defect_stats(num_true_perimage, num_pred_perimage, num_found_per
                                    columns=['num true total', 'num pred total', 'num found total',
                                             'overall precision', 'overall recall', 'overall F1'],
                                    index=['overall stats'])
-    df_overallstats.to_csv(os.path.join(save_path, 'OverallStats.csv')
+    df_overallstats.to_csv(os.path.join(save_path, 'OverallStats.csv'))
 
     return df_overallstats
 
@@ -694,7 +694,7 @@ def run_assess(ANNO_PATH, IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, S
         print(' Num true defects:', len(true_boxes))
         print(' Num predicted defects:', len(pred_boxes))
         print(' Num found defects:', len(found_defects))
-        print(' Image P, R, F1 scores:', P, R, F1)
+        print(' Image P, R, F1 scores:', prec, recall, F1)
         print(' True swelling (percent swelling):', true_swelling)
         print(' Pred swelling (percent swelling):', pred_swelling)
         print(' True defect density (#*10^4/nm^2):', true_density[0])
