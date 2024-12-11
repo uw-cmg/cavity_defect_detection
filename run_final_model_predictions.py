@@ -13,6 +13,8 @@ from scipy.spatial import ConvexHull
 from scipy.spatial.distance import cdist
 from matplotlib import pyplot as plt
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+import json
+
 
 def visualize_image(IMAGE_PATH, MY_IMAGE):
     print('On image', MY_IMAGE)
@@ -285,7 +287,7 @@ def get_swelling(im, image_thickness, nm_per_pixel, pred_sizes):
     pred_swelling = 100*(vol_change / (vol - vol_change))
     return pred_swelling
 
-def run_true_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, anno, defect_metadata):
+def run_true_analysis(SAVE_PATH, IMAGE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, anno, defect_metadata):
     true_classes, true_segmentations, true_boxes, im = get_true_data(anno=anno, 
                         image_name=MY_IMAGE, 
                         image_path=IMAGE_PATH,
@@ -464,7 +466,7 @@ def get_pred_f1(model_path, im, pred_boxes, pred_sizes, pred_scores):
     return pred_f1, image_confidence
 
 def make_parity(SAVE_PATH, trues, preds, quantity='sizes'):
-    if quanitity == 'sizes':
+    if quantity == 'sizes':
         units = 'nm'
     elif quantity == 'shapes':
         units = 'Heywood circularity'
@@ -577,7 +579,7 @@ def run_assess(ANNO_PATH, IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, S
     pred_shape_avg_img = list()
     for MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS in zip(IMAGE_LIST, NM_PER_PIXEL_LIST, IMAGE_THICKNESS_LIST):
         # Get true annos
-        true_classes, true_boxes, true_segmentations, true_sizes, true_shapes, true_density, true_swelling = run_true_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, anno, defect_metadata)
+        true_classes, true_boxes, true_segmentations, true_sizes, true_shapes, true_density, true_swelling = run_true_analysis(SAVE_PATH, IMAGE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, anno, defect_metadata)
         
         # Get preds
         im, outputs = visualize_pred_image(IMAGE_PATH, SAVE_PATH, MY_IMAGE, predictor, defect_metadata)
