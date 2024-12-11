@@ -507,6 +507,96 @@ def make_parity(SAVE_PATH, trues, preds, quantity='sizes'):
 
     return
 
+def match_true_and_predicted_defects_iou_bbox(true_classes_all_oneimage_sorted, pred_classes_all_oneimage_sorted,
+        true_boxes_oneimage_sorted, pred_boxes_oneimage_sorted, iou_threshold=0.1):
+
+    # Loop over true bboxes and check if they correspond to pred bboxes. Do this by calculating IoU of all predicted boxes
+    # and selecting the highest one. If not, then prediction missed one
+    true_pred_index_list = list()
+    for i, true_box in enumerate(true_boxes_oneimage_sorted):
+        ious = dict()
+        for j, pred_box in enumerate(pred_boxes_oneimage_sorted):
+            if j not in true_pred_index_list:
+                iou = bb_intersection_over_union(boxA=true_box, boxB=pred_box)
+                #print('True box', true_box, 'and pred box', pred_box, 'have iou', iou)
+                ious[j] = iou
+        # Use whichever has largest iou
+        iou = -1
+        for k, v in ious.items():
+            if v > iou:
+                iou = v
+                true_pred_index = k
+
+        # Check that the iou satisfies the iou_threshold value set by user
+        if iou >= iou_threshold:
+            true_class = true_classes_all_oneimage_sorted[i]
+            pred_class = pred_classes_all_oneimage_sorted[true_pred_index]
+
+            # Found a defect, so overall a true positive (not discerning defect type)
+            num_found += 1
+
+            true_pred_index_list.append(true_pred_index)
+
+            #print('FOUND TRUE BOX', [true_box[0], true_box[1], true_box[2], true_box[3]], 'with TRUE CLASS',
+            #      true_class, 'and PRED BOX',
+            #      [pred_boxes_oneimage_sorted[true_pred_index][0], pred_boxes_oneimage_sorted[true_pred_index][1],
+            #       pred_boxes_oneimage_sorted[true_pred_index][2], pred_boxes_oneimage_sorted[true_pred_index][3]], 'with PRED CLASS',
+            #      pred_class)
+        else:
+            pass
+            #print('FOUND TRUE BOX', [true_box[0], true_box[1], true_box[2], true_box[3]], 'with TRUE CLASS',
+            #      true_classes_all_oneimage_sorted[i], 'BUT NO CORRESPONDING PRED MASK THAT MET IOU THRESHOLD')
+
+    return num_found
+
+def bb_intersection_over_union(boxA, boxB):
+    # This code is not mine. I got it from this github post: https://gist.github.com/meyerjo/dd3533edc97c81258898f60d8978eddc,
+    # which corrected an issue in this original post: https://www.pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/
+
+    # determine the (x, y)-coordinates of the intersection rectangle
+    xA = max(boxA[0], boxB[0])
+    yA = max(boxA[1], boxB[1])
+    xB = min(boxA[2], boxB[2])
+    yB = min(boxA[3], boxB[3])
+
+    # compute the area of intersection rectangle
+    interArea = abs(max((xB - xA, 0)) * max((yB - yA), 0))
+    if interArea == 0:
+        return 0.0
+    # compute the area of both the prediction and ground-truth
+    # rectangles
+    boxAArea = abs((boxA[2] - boxA[0]) * (boxA[3] - boxA[1]))
+    boxBArea = abs((boxB[2] - boxB[0]) * (boxB[3] - boxB[1]))
+
+    # compute the intersection over union by taking the intersection
+    # area and dividing it by the sum of prediction + ground-truth
+    # areas - the interesection area
+    iou = interArea / float(boxAArea + boxBArea - interArea)
+
+    # return the intersection over union value
+    return iou
+
+def get_overall_defect_stats(num_true_perimage, num_pred_perimage, num_found_perimage, save_path):
+    # Total up the number of instances that are true, predicted, and found correctly for overall P, R, F1 scores
+    num_true_total = np.sum(num_true_perimage)
+    num_pred_total = np.sum(num_pred_perimage)
+    num_found_total = np.sum(num_found_perimage)
+    overall_fp = num_pred_total - num_found_total
+    overall_fn = num_true_total - num_found_total
+    overall_prec = num_found_total / (num_found_total + overall_fp)
+    overall_recall = num_found_total / (num_found_total + overall_fn)
+    overall_f1 = (2 * overall_prec * overall_recall) / (overall_prec + overall_recall)
+    overall_stats_arr = np.array(
+        [[num_true_total, num_pred_total, num_found_total, overall_prec, overall_recall, overall_f1]])
+
+    df_overallstats = pd.DataFrame(data=overall_stats_arr,
+                                   columns=['num true total', 'num pred total', 'num found total',
+                                            'overall precision', 'overall recall', 'overall F1'],
+                                   index=['overall stats'])
+    df_overallstats.to_csv(os.path.join(save_path, 'OverallStats.csv')
+
+    return df_overallstats
+
 def run_predict(IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, SAVE_PATH, NM_PER_PIXEL_LIST, IMAGE_THICKNESS_LIST, NUM_CLASSES, CLASS_NAMES, CLASS_COLORS, MAKE_SIZE_HIST=False):
     if not os.path.exists(SAVE_PATH):
         os.mkdir(SAVE_PATH)
@@ -578,6 +668,9 @@ def run_assess(ANNO_PATH, IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, S
     pred_density_avg_img = list()
     pred_swelling_avg_img = list()
     pred_shape_avg_img = list()
+    num_true_perimage = list()
+    num_pred_perimage = list()
+    num_found_perimage = list()
     for MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS in zip(IMAGE_LIST, NM_PER_PIXEL_LIST, IMAGE_THICKNESS_LIST):
         # Get true annos
         true_classes, true_boxes, true_segmentations, true_sizes, true_shapes, true_density, true_swelling = run_true_analysis(SAVE_PATH, IMAGE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, anno, defect_metadata)
@@ -587,10 +680,12 @@ def run_assess(ANNO_PATH, IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, S
         pred_classes, pred_boxes, pred_segmentations, pred_sizes, pred_shapes, pred_density, pred_swelling, pred_scores = run_pred_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, im, outputs)
 
         # Do detection to get found defects
-        P = 'goat'
-        R = 'sheep'
-        F1 = 'cat'
-        found_defects = 'lol'
+        num_found = match_true_and_predicted_defects_iou_bbox(true_classes, pred_classes_, true_boxes, pred_boxes, iou_threshold=0.1)
+        fp = len(pred_boxes) - num_found
+        fn = len(true_boxes) - num_found
+        prec = num_found / (num_found + fp)
+        recall = num_found / (num_found + fn)
+        F1 = (2 * prec * recall) / (prec + recall)
 
         # Output report for the image
         print('********** IMAGE PREDICTIONS **********')
@@ -618,7 +713,17 @@ def run_assess(ANNO_PATH, IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, S
         pred_swelling_avg_img.append(pred_swelling)
         pred_shape_avg_img.append(np.mean(pred_shapes))
 
+        num_true_perimage.append(len(true_boxes))
+        num_pred_perimage.append(len(pred_boxes))
+        num_found_perimage.append(num_found)
+                           
+
     # Make parity plots with average values across all images
-    make_parity(SAVE_PATH, true_sizes, pred_sizes, quantity='sizes')
+    make_parity(SAVE_PATH, true_size_avg_img, pred_size_avg_img, quantity='sizes')
+    make_parity(SAVE_PATH, true_density_avg_img, pred_density_avg_img, quantity='density')
+    make_parity(SAVE_PATH, true_swelling_avg_img, pred_swelling_avg_img, quantity='swelling')
+    make_parity(SAVE_PATH, true_shape_avg_img, pred_shape_avg_img, quantity='shapes')
+
+    get_overall_defect_stats(num_true_perimage, num_pred_perimage, num_found_perimage, SAVE_PATH)
         
     return
