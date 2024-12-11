@@ -12,6 +12,7 @@ import numpy as np
 from scipy.spatial import ConvexHull
 from scipy.spatial.distance import cdist
 from matplotlib import pyplot as plt
+from sklearn.metrics impor r2_score, mean_absolute_error, mean_squared_error
 
 def visualize_image(IMAGE_PATH, MY_IMAGE):
     print('On image', MY_IMAGE)
@@ -91,6 +92,105 @@ def get_pred_data(instances):
         n_masks += 1
         
     return pred_classes, pred_boxes, pred_segmentations, pred_scores
+
+def get_true_data(anno, 
+                        image_name, 
+                        image_path,
+                        save_path, 
+                        defect_metadata,
+                        visualize_image=True, 
+                        save_images=True):
+    # Find the right image
+    found_image = False
+    for i, anno_dict in enumerate(anno['images']):
+        base_imagename = image_name.split('/')[-1]
+        base_filename = anno_dict["file_name"].split('/')[-1]
+        if base_filename == base_imagename:
+            image_id = anno['images'][i]['id']
+            found_image = True
+            print('Successfully found image', image_name, 'with image id', image_id)
+            break
+    if found_image == False:
+        print(
+            'WARNING: An error occurred, the provided filename could not be corresponded with the name of an image file in the provided annotation dictionaries')
+        return
+
+    img = cv2.imread(os.path.join(image_path, anno_dict["file_name"]))
+
+    # Need to get the list of annotations pertaining to this image
+    anno_list = list()
+    anno_dict = dict()
+    for a in anno['annotations']:
+        if a['image_id'] == image_id:
+            a['bbox_mode'] = BoxMode.XYWH_ABS
+            a['category_id'] = 0
+            anno_list.append(a)
+    anno_dict['annotations'] = anno_list
+    print('Found true annotations', len(anno_list))
+
+    print(anno_dict['annotations'])
+
+    # Assign color to each defect in the image
+    assigned_colors_list = list()
+    for defect in anno_list:
+        id = defect['category_id']
+        if id == 0:  # bdot
+            assigned_colors_list.append('b')
+        elif id == 1:  # 111
+            assigned_colors_list.append('r')
+        else:
+            assigned_colors_list.append('y')
+    anno_dict['assigned_colors'] = assigned_colors_list
+
+    if visualize_image == True:
+        visualizer = Visualizer(img[:, :, ::-1],
+                                metadata=defect_metadata,
+                                scale=1.0,
+                                instance_mode=ColorMode.SEGMENTATION
+                                )
+
+        vis = visualizer.draw_dataset_dict(anno_dict)
+        img2 = vis.get_image()[:, :, ::-1]
+
+        if save_images == True:
+            cv2.imwrite(os.path.join(save_path, base_imagename + '_true.png'), img2)
+
+    # PARSE AND OUTPUT TRUE PIXEL DATA
+    df_list_true = list()
+    true_classes = list()
+    true_boxes = list()
+    true_segmentations = list()
+    n_masks = 0
+    for obj in anno_dict['annotations']:
+        data_dict_true = dict()
+        seg_y = list()
+        seg_x = list()
+        seg_y_nearestint = list()
+        seg_x_nearestint = list()
+        true_classes.append(obj['category_id'])
+        true_boxes.append(obj['bbox'])
+        #true_segmentations = list()
+
+        n_defects = len(anno_dict['annotations'])
+        for i, seg in enumerate(obj['segmentation'][0]):
+            if i == 0:
+                seg_y.append(seg)
+                seg_y_nearestint.append(int(seg))
+            else:
+                if i % 2 == 0:
+                    seg_y.append(seg)
+                    seg_y_nearestint.append(int(seg))
+                else:
+                    seg_x.append(seg)
+                    seg_x_nearestint.append(int(seg))
+
+        segmentation = np.array([seg_y, seg_x]).T
+        segmentation_nearestint = np.array([seg_y_nearestint, seg_x_nearestint]).T
+        data_dict_true['segmentation_y'] = segmentation[:, 0]
+        data_dict_true['segmentation_x'] = segmentation[:, 1]
+        true_segmentations.append([segmentation_nearestint[:, 0].tolist(), segmentation_nearestint[:, 1].tolist()])
+
+    return true_classes, true_segmentations, true_boxes, img
 
 def get_mask_vertices(points):
     try:
@@ -176,7 +276,6 @@ def get_sizes_and_shapes_image(pred_segmentations, pred_classes, nm_per_pixel, n
         return [pred_sizes[pred_size] for pred_size in list(pred_sizes.keys())], [pred_shapes[pred_shape] for pred_shape
                                                                                   in list(pred_shapes.keys())]
 
-
 def get_swelling(im, image_thickness, nm_per_pixel, pred_sizes):
     vol_change = 0
     for pred_size in pred_sizes:
@@ -186,7 +285,63 @@ def get_swelling(im, image_thickness, nm_per_pixel, pred_sizes):
     pred_swelling = 100*(vol_change / (vol - vol_change))
     return pred_swelling
 
-def run_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, im, outputs):
+def run_true_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, anno, defect_metadata):
+    true_classes, true_segmentations, true_boxes, im = get_true_data(anno=anno, 
+                        image_name=MY_IMAGE, 
+                        image_path=IMAGE_PATH,
+                        save_path=SAVE_PATH, 
+                        defect_metadata=defect_metadata,
+                        visualize_image=True, 
+                        save_images=True)
+    
+    true_density = get_density(im=im,
+                               pred_classes=true_classes,
+                               nm_per_pixel=NM_PER_PIXEL,
+                               num_classes = NUM_CLASSES)
+    true_sizes, true_shapes = get_sizes_and_shapes_image(pred_segmentations=true_segmentations,
+                                                         pred_classes=true_classes,
+                                                         nm_per_pixel=NM_PER_PIXEL,
+                                                         num_classes = NUM_CLASSES)
+    true_swelling = get_swelling(im=im,
+                                 image_thickness=IMAGE_THICKNESS,
+                                 nm_per_pixel=NM_PER_PIXEL,
+                                 pred_sizes=true_sizes)
+    if NUM_CLASSES == 1:
+        num_preds = len(true_classes)
+        avg_pred_size = round(np.mean(true_sizes), 3)
+        std_pred_size = round(np.std(true_sizes), 3)
+        avg_pred_shape = round(np.mean(true_shapes), 3)
+        std_pred_shape = round(np.std(true_shapes), 3)
+        pred_density = round(true_density, 6)
+        pred_swelling = round(true_swelling, 2)
+    else:
+        num_preds = list()
+        for i, cls in enumerate(CLASS_NAMES):
+              num_preds.append(len(np.array(true_classes)[np.where(np.array(true_classes)==i)]))
+        avg_true_size = [round(np.mean(sizes), 3) for sizes in true_sizes]
+        std_true_size = [round(np.std(sizes), 3) for sizes in true_sizes]
+        avg_true_shape = [round(np.mean(shapes), 3) for shapes in true_shapes]
+        std_true_shape = [round(np.std(shapes), 3) for shapes in true_shapes]
+        true_density = [round(dens, 6) for dens in true_density]
+
+    data_dict = dict()
+    if type(true_density) is float:
+        true_density = [true_density]
+    data_dict['true_classes'] = true_classes
+    data_dict['true_boxes'] = true_boxes
+    data_dict['true_segmentations'] = true_segmentations
+    data_dict['true_sizes'] = true_sizes
+    data_dict['true_shapes'] = true_shapes
+    data_dict['true_density'] = true_density
+    data_dict['true_swelling'] = [true_swelling]
+    data_dict['num_true'] = [len(true_boxes)]
+        
+    df = pd.DataFrame().from_dict(data_dict, orient='index').T
+    df.to_csv(os.path.join(SAVE_PATH, 'true_stats_'+MY_IMAGE[:-4]+'.csv'), index=False)
+
+    return true_classes, true_boxes, true_segmentations, true_sizes, true_shapes, true_density, true_swelling
+
+def run_pred_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, im, outputs):
     pred_classes, pred_boxes, pred_segmentations, pred_scores = get_pred_data(instances=outputs['instances'])
     pred_density = get_density(im=im,
                                pred_classes=pred_classes,
@@ -308,7 +463,48 @@ def get_pred_f1(model_path, im, pred_boxes, pred_sizes, pred_scores):
     
     return pred_f1, image_confidence
 
-def run(IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, SAVE_PATH, NM_PER_PIXEL_LIST, IMAGE_THICKNESS_LIST, NUM_CLASSES, CLASS_NAMES, CLASS_COLORS, MAKE_SIZE_HIST=False):
+def make_parity(SAVE_PATH, trues, preds, quantity='sizes'):
+    if quanitity == 'sizes':
+        units = 'nm'
+    elif quantity == 'shapes':
+        units = 'Heywood circularity'
+    elif quantity == 'density':
+        units = '#*10^4/nm^2'
+    elif quantity == 'swelling':
+        units = '% vol change'
+
+    plt.clf()
+    plt.scatter(trues, preds, s=80, color='blue', edgecolor='black', alpha=0.5)
+    plt.xlabel('True average cavity '+quantity+' ('+units+')', fontsize=14)
+    plt.xticks(fontsize=12)
+    plt.ylabel('Pred average cavity '+quantity+' ('+units+')', fontsize=14)
+    plt.yticks(fontsize=12)
+    min1 = min(trues)
+    min2 = min(preds)
+    max1 = max(trues)
+    max2 = max(preds)
+    minn = min([min1, min2])
+    maxx = max([max1, max2])
+    plt.plot([minn, maxx], [minn, maxx], 'k--')
+
+    r2 = r2_score(trues, preds)
+    mae = mean_absolute_error(trues, preds)
+    rmse = np.sqrt(mean_squared_error(trues, preds))
+    rmse_std = rmse / np.std(trues)
+
+    plt.text(1.2*minn, 0.8*maxx, 'R2: '+str(round(r2, 3)), fontsize=10)
+    plt.text(1.2*minn, 0.75*maxx, 'MAE: '+str(round(mae, 3)), fontsize=10)
+    plt.text(1.2*minn, 0.7*maxx, 'RMSE: '+str(round(rmse, 3)), fontsize=10)
+    plt.text(1.2*minn, 0.65*maxx, 'RMSE/std: '+str(round(rmse_std, 3)), fontsize=10)
+    
+    plt.savefig(os.path.join(SAVE_PATH, 'parity_true_pred_cavity_'+quantity+'.png'), dpi=300, bbox_inches='tight')
+
+    df = pd.DataFrame({'True '+quantity: trues, 'Pred '+quantity: preds})
+    df.to_csv(os.path.join(SAVE_PATH, 'parity_true_pred_cavity_'+quantity+'.csv'), index=False)        
+
+    return
+
+def run_predict(IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, SAVE_PATH, NM_PER_PIXEL_LIST, IMAGE_THICKNESS_LIST, NUM_CLASSES, CLASS_NAMES, CLASS_COLORS, MAKE_SIZE_HIST=False):
     if not os.path.exists(SAVE_PATH):
         os.mkdir(SAVE_PATH)
     predictor, defect_metadata = get_config(IMAGE_PATH, MODEL_PATH, SAVE_PATH, NUM_CLASSES, CLASS_NAMES, CLASS_COLORS)
@@ -348,5 +544,77 @@ def run(IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, SAVE_PATH, NM_PER_P
             hist_name = 'size_histogram_'+MY_IMAGE[:-4]+'.png'
             plt.savefig(os.path.join(SAVE_PATH, hist_name), dpi=250, bbox_inches='tight')
             plt.show()
+        
+    return
+
+def run_assess(ANNO_PATH, IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, SAVE_PATH, NM_PER_PIXEL_LIST, IMAGE_THICKNESS_LIST, NUM_CLASSES, CLASS_NAMES, CLASS_COLORS, MAKE_SIZE_HIST=False)
+    if not os.path.exists(SAVE_PATH):
+        os.mkdir(SAVE_PATH)
+
+    predictor, defect_metadata = get_config(IMAGE_PATH, MODEL_PATH, SAVE_PATH, NUM_CLASSES, CLASS_NAMES, CLASS_COLORS)
+
+    if len(NM_PER_PIXEL_LIST) == 1:
+        if len(NM_PER_PIXEL_LIST) < len(IMAGE_LIST):
+            print('You have specified multiple images but only one value for NM_PER_PIXEL_LIST. Applying this value to all images...')
+            val = NM_PER_PIXEL_LIST[0]
+            NM_PER_PIXEL_LIST = [val for _ in range(len(IMAGE_LIST))]
+    if len(IMAGE_THICKNESS_LIST) == 1:
+        if len(IMAGE_THICKNESS_LIST) < len(IMAGE_LIST):
+            print('You have specified multiple images but only one value for IMAGE_THICKNESS_LIST. Applying this value to all images...')
+            val = IMAGE_THICKNESS_LIST[0]
+            IMAGE_THICKNESS_LIST = [val for _ in range(len(IMAGE_LIST))]
+
+    with open(ANNO_PATH, 'rb') as f:
+        anno = json.load(f)
+
+    true_size_avg_img = list()
+    true_density_avg_img = list()
+    true_swelling_avg_img = list()
+    true_shape_avg_img = list()
+    pred_size_avg_img = list()
+    pred_density_avg_img = list()
+    pred_swelling_avg_img = list()
+    pred_shape_avg_img = list()
+    for MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS in zip(IMAGE_LIST, NM_PER_PIXEL_LIST, IMAGE_THICKNESS_LIST):
+        # Get true annos
+        true_classes, true_boxes, true_segmentations, true_sizes, true_shapes, true_density, true_swelling = run_true_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, anno, defect_metadata)
+        
+        # Get preds
+        im, outputs = visualize_pred_image(IMAGE_PATH, SAVE_PATH, MY_IMAGE, predictor, defect_metadata)
+        pred_classes, pred_boxes, pred_segmentations, pred_sizes, pred_shapes, pred_density, pred_swelling, pred_scores = run_pred_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, im, outputs)
+
+        # Do detection to get found defects
+        P = 'goat'
+        R = 'sheep'
+        F1 = 'cat'
+
+        # Output report for the image
+        print('********** IMAGE PREDICTIONS **********')
+        print(' Image name:', MY_IMAGE)
+        print(' Defect types:', CLASS_NAMES)
+        print(' Num true defects:', len(true_boxes))
+        print(' Num predicted defects:', len(pred_boxes))
+        print(' Num found defects:', len(found_defects))
+        print(' Image P, R, F1 scores:', P, R, F1)
+        print(' True swelling (percent swelling):', true_swelling)
+        print(' Pred swelling (percent swelling):', pred_swelling)
+        print(' True defect density (#*10^4/nm^2):', true_density[0])
+        print(' Pred defect density (#*10^4/nm^2):', pred_density[0])
+        print(' True defect size (nm) as avg, stdev:', np.mean(true_sizes), np.std(true_sizes))
+        print(' Pred defect size (nm) as avg, stdev:', np.mean(pred_sizes), np.std(pred_sizes))
+        print(' True defect shape (Heywood circularity) as avg, stdev:', np.mean(true_shapes), np.std(true_shapes))
+        print(' Pred defect shape (Heywood circularity) as avg, stdev:', np.mean(pred_shapes), np.std(pred_shapes))
+
+        true_size_avg_img.append(np.mean(true_sizes))
+        true_density_avg_img.append(true_density[0])
+        true_swelling_avg_img.append(true_swelling)
+        true_shape_avg_img.append(np.mean(true_shapes))
+        pred_size_avg_img.append(np.mean(pred_sizes))
+        pred_density_avg_img.append(pred_density[0])
+        pred_swelling_avg_img.append(pred_swelling)
+        pred_shape_avg_img.append(np.mean(pred_shapes))
+
+    # Make parity plots with average values across all images
+    make_parity(SAVE_PATH, true_sizes, pred_sizes, quantity='sizes')
         
     return
