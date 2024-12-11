@@ -12,7 +12,7 @@ import numpy as np
 from scipy.spatial import ConvexHull
 from scipy.spatial.distance import cdist
 from matplotlib import pyplot as plt
-from sklearn.metrics impor r2_score, mean_absolute_error, mean_squared_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 
 def visualize_image(IMAGE_PATH, MY_IMAGE):
     print('On image', MY_IMAGE)
