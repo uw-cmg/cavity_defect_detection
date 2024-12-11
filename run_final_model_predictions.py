@@ -6,6 +6,7 @@ from detectron2.data import MetadataCatalog, DatasetCatalog
 from detectron2 import model_zoo
 from detectron2.engine import DefaultPredictor
 from detectron2.config import get_cfg
+from detectron2.structures.boxes import BoxMode
 import pandas as pd
 from shapely.geometry import Polygon as shapelyPolygon
 import numpy as np
@@ -589,6 +590,7 @@ def run_assess(ANNO_PATH, IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, S
         P = 'goat'
         R = 'sheep'
         F1 = 'cat'
+        found_defects = 'lol'
 
         # Output report for the image
         print('********** IMAGE PREDICTIONS **********')
