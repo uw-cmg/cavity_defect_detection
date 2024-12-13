@@ -130,14 +130,10 @@ def get_true_data(anno,
             a['category_id'] = 0
             bbox = a['bbox']
             bbox_mod = [bbox[0], bbox[1], bbox[0]+bbox[2], bbox[1]+bbox[3]]
-            print('init box, mod box')
-            print(bbox, bbox_mod)
             a['bbox'] = bbox_mod
             anno_list.append(a)
     anno_dict['annotations'] = anno_list
-    print('Found true annotations', len(anno_list))
 
-    print(anno_dict['annotations'])
 
     # Assign color to each defect in the image
     assigned_colors_list = list()
