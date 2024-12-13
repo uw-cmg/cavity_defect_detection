@@ -125,8 +125,14 @@ def get_true_data(anno,
     anno_dict = dict()
     for a in anno['annotations']:
         if a['image_id'] == image_id:
-            a['bbox_mode'] = BoxMode.XYWH_ABS
+            #a['bbox_mode'] = BoxMode.XYWH_ABS
+            a['bbox_mode'] = BoxMode.XYXY_ABS
             a['category_id'] = 0
+            bbox = a['bbox']
+            bbox_mod = [bbox[0], bbox[1], bbox[0]+bbox[2], bbox[1]+bbox[3]]
+            print('init box, mod box')
+            print(bbox, bbox_mod)
+            a['bbox'] = bbox_mod
             anno_list.append(a)
     anno_dict['annotations'] = anno_list
     print('Found true annotations', len(anno_list))
@@ -518,9 +524,9 @@ def match_true_and_predicted_defects_iou_bbox(true_classes_all_oneimage_sorted, 
         ious = dict()
         for j, pred_box in enumerate(pred_boxes_oneimage_sorted):
             if j not in true_pred_index_list:
-                true_box_shift = [true_box[0], true_box[1], true_box[0]+true_box[2], true_box[0]+true_box[3]]
-                iou = bb_intersection_over_union(boxA=true_box_shift, boxB=pred_box)
-                #iou = bb_intersection_over_union(boxA=true_box, boxB=pred_box)
+                #true_box_shift = [true_box[0], true_box[1], true_box[0]+true_box[2], true_box[0]+true_box[3]]
+                #iou = bb_intersection_over_union(boxA=true_box_shift, boxB=pred_box)
+                iou = bb_intersection_over_union(boxA=true_box, boxB=pred_box)
                 #print('True box', true_box, 'and pred box', pred_box, 'have iou', iou)
                 ious[j] = iou
         # Use whichever has largest iou
