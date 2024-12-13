@@ -627,7 +627,7 @@ def run_predict(IMAGE_LIST, IMAGE_PATH, MODEL_PATH, MODEL_PATH_BASE, SAVE_PATH, 
     for MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS in zip(IMAGE_LIST, NM_PER_PIXEL_LIST, IMAGE_THICKNESS_LIST):
         visualize_image(IMAGE_PATH, MY_IMAGE)
         im, outputs = visualize_pred_image(IMAGE_PATH, SAVE_PATH, MY_IMAGE, predictor, defect_metadata)
-        pred_classes, pred_boxes, pred_segmentations, pred_sizes, pred_shapes, pred_density, pred_swelling, pred_scores = run_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, im, outputs)
+        pred_classes, pred_boxes, pred_segmentations, pred_sizes, pred_shapes, pred_density, pred_swelling, pred_scores = run_pred_analysis(SAVE_PATH, MY_IMAGE, NM_PER_PIXEL, IMAGE_THICKNESS, NUM_CLASSES, CLASS_NAMES, im, outputs)
 
         pred_f1, image_confidence = get_pred_f1(MODEL_PATH_BASE, im, pred_boxes, pred_sizes, pred_scores)
 
