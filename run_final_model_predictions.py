@@ -480,9 +480,9 @@ def make_parity(SAVE_PATH, trues, preds, quantity='sizes'):
 
     plt.clf()
     plt.scatter(trues, preds, s=80, color='blue', edgecolor='black', alpha=0.5)
-    plt.xlabel('True average cavity '+quantity+' ('+units+')', fontsize=14)
+    plt.xlabel('True average cavity '+quantity+' ('+units+')', fontsize=12)
     plt.xticks(fontsize=12)
-    plt.ylabel('Pred average cavity '+quantity+' ('+units+')', fontsize=14)
+    plt.ylabel('Pred average cavity '+quantity+' ('+units+')', fontsize=12)
     plt.yticks(fontsize=12)
     min1 = min(trues)
     min2 = min(preds)
@@ -497,10 +497,16 @@ def make_parity(SAVE_PATH, trues, preds, quantity='sizes'):
     rmse = np.sqrt(mean_squared_error(trues, preds))
     rmse_std = rmse / np.std(trues)
 
-    plt.text(1.2*minn, 0.8*maxx, 'R2: '+str(round(r2, 3)), fontsize=10)
-    plt.text(1.2*minn, 0.75*maxx, 'MAE: '+str(round(mae, 3)), fontsize=10)
-    plt.text(1.2*minn, 0.7*maxx, 'RMSE: '+str(round(rmse, 3)), fontsize=10)
-    plt.text(1.2*minn, 0.65*maxx, 'RMSE/std: '+str(round(rmse_std, 3)), fontsize=10)
+    if quantity == 'shapes':
+        plt.text(1.05, 1.25, 'R2: '+str(round(r2, 3)), fontsize=10)
+        plt.text(1.05, 1.225, 'MAE: '+str(round(mae, 3)), fontsize=10)
+        plt.text(1.05, 1.2, 'RMSE: '+str(round(rmse, 3)), fontsize=10)
+        plt.text(1.05, 1.175, 'RMSE/std: '+str(round(rmse_std, 3)), fontsize=10)
+    else:
+        plt.text(1.2*minn, 0.8*maxx, 'R2: '+str(round(r2, 3)), fontsize=10)
+        plt.text(1.2*minn, 0.75*maxx, 'MAE: '+str(round(mae, 3)), fontsize=10)
+        plt.text(1.2*minn, 0.7*maxx, 'RMSE: '+str(round(rmse, 3)), fontsize=10)
+        plt.text(1.2*minn, 0.65*maxx, 'RMSE/std: '+str(round(rmse_std, 3)), fontsize=10)
     
     plt.savefig(os.path.join(SAVE_PATH, 'parity_true_pred_cavity_'+quantity+'.png'), dpi=300, bbox_inches='tight')
 
@@ -533,7 +539,7 @@ def match_true_and_predicted_defects_iou_bbox(true_classes_all_oneimage_sorted, 
                 true_pred_index = k
 
         # Check that the iou satisfies the iou_threshold value set by user
-        print('highest true/pred iou', iou)
+        #print('highest true/pred iou', iou)
         if iou >= iou_threshold:
             true_class = true_classes_all_oneimage_sorted[i]
             pred_class = pred_classes_all_oneimage_sorted[true_pred_index]
