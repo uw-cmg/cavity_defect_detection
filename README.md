@@ -5,7 +5,7 @@ Mask R-CNN model to detect cavity defects in electron microscopy images. Also in
 
 Make predictions of image F1 score with Random forest model and object predictions with Mask R-CNN using final model fit to all data.
 This model was trained on all 770 images in our joint database.
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/uw-cmg/cavity_defect_detection/blob/main/Detectron_predict_v3_cavity.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/uw-cmg/cavity_defect_detection/blob/main/Cavity_final_model_predictions.ipynb)
 
 Assess predictions of object predictions with Mask R-CNN on held-out test set. This model was trained on 646 images and then assessed on a set of 124 held-out images
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/uw-cmg/cavity_defect_detection/blob/main/Cavity_assess_model_predictions.ipynb)
