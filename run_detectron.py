@@ -2,8 +2,8 @@ import yaml
 import argparse
 import os
 import shutil
-from mast_defectdetection.detectron_maskrcnn import train_detectron_maskrcnn, get_config_file, get_defect_metadata, get_defect_anno_dict_train, get_defect_anno_dict_val
-from mast_defectdetection.analyze_maskrcnn import analyze_checkpoints, plot_learning_curve, plot_overall_stats_vs_iou_threshold, save_excel_together_finalreport
+from detectron_maskrcnn_cavity import train_detectron_maskrcnn, get_config_file, get_defect_metadata, get_defect_anno_dict_train, get_defect_anno_dict_val
+from analyze_maskrcnn_cavity import analyze_checkpoints, plot_learning_curve, plot_overall_stats_vs_iou_threshold, save_excel_together_finalreport
 
 def run_maskrcnn(input_yaml):
     cfg, defect_metadata = train_detectron_maskrcnn(input_yaml)
