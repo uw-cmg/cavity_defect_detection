@@ -14,6 +14,6 @@ Assess predictions of object predictions with Mask R-CNN on held-out test set. T
 
 If you find this repository useful, please cite the following publications:
 
-Li, N., Jacobs, R., Lynch, M., Agrawal, V., Field, K. G., Morgan, D., "Predicting Performance of Object Detection Models in Electron Microscopy using Random Forests", Submitted to Digital Discovery (2024)
+Li, N., Jacobs, R., Lynch, M., Agrawal, V., Field, K. G., Morgan, D., "Predicting Performance of Object Detection Models in Electron Microscopy using Random Forests", Digital Discovery, 4, 987-997 (2025). https://doi.org/10.1039/D4DD00351A
 
 Jacobs, R., Patki, P., Lynch, M., Chen, S., Morgan, D., Field, K. G. "Materials swelling revealed through automated semantic segmentation of cavities in electron microscopy images", Scientific Reports, 13, 5178 (2023). https://doi.org/10.1038/s41598-023-32454-2
